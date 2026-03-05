@@ -104,11 +104,14 @@ type PublishRequest struct {
 
 // PublishResponse 发布响应
 type PublishResponse struct {
-	Success bool   `json:"success"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
-	Images  int    `json:"images"`
-	Message string `json:"message"`
+	Success     bool   `json:"success"`
+	Title       string `json:"title"`
+	Content     string `json:"content"`
+	Images      int    `json:"images"`
+	Message     string `json:"message"`
+	NeedLogin   bool   `json:"need_login,omitempty"`   // 是否需要登录
+	QrcodeURL   string `json:"qrcode_url,omitempty"`   // 二维码 URL
+	QrcodeSaved bool   `json:"qrcode_saved,omitempty"` // 二维码是否已保存
 }
 
 // PublishContent 发布内容
@@ -133,10 +136,17 @@ func (s *HeyboxService) PublishContent(ctx context.Context, req *PublishRequest)
 	}
 
 	// 执行发布
-	if err := s.publishContent(ctx, content); err != nil {
+	result, err := s.publishContent(ctx, content)
+	if err != nil {
 		return nil, err
 	}
 
+	// 如果返回了结果（可能需要登录），直接返回
+	if result != nil {
+		return result, nil
+	}
+
+	// 发布成功
 	return &PublishResponse{
 		Success: true,
 		Title:   req.Title,
@@ -175,7 +185,7 @@ func (s *HeyboxService) processImages(images []string) ([]string, error) {
 }
 
 // publishContent 执行发布
-func (s *HeyboxService) publishContent(ctx context.Context, content heybox.PublishContent) error {
+func (s *HeyboxService) publishContent(ctx context.Context, content heybox.PublishContent) (*PublishResponse, error) {
 	b := newBrowser()
 	defer b.Close()
 
@@ -188,23 +198,35 @@ func (s *HeyboxService) publishContent(ctx context.Context, content heybox.Publi
 		logrus.Warnf("加载 Cookies 失败: %v", err)
 	}
 
-	// 检查登录状态
-	isLoggedIn, err := loginAction.CheckLoginStatus(ctx)
-	if err != nil {
-		return err
-	}
-	if !isLoggedIn {
-		return fmt.Errorf("未登录，请先运行登录工具")
-	}
-
-	// 创建发布操作
+	// 创建发布操作（会导航到发布页面）
 	publishAction, err := heybox.NewPublishAction(page)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	// 检查登录状态，如果未登录则获取二维码
+	loginResult, err := publishAction.CheckLoginAndFetchQrcode(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 如果需要登录，返回二维码信息
+	if loginResult.NeedLogin {
+		return &PublishResponse{
+			Success:     false,
+			NeedLogin:   true,
+			QrcodeURL:   loginResult.QrcodeURL,
+			QrcodeSaved: loginResult.QrcodeSaved,
+			Message:     "需要登录，请扫描二维码后重试",
+		}, nil
 	}
 
 	// 执行发布
-	return publishAction.Publish(ctx, content)
+	if err := publishAction.Publish(ctx, content); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // FeedListResponse 动态列表响应

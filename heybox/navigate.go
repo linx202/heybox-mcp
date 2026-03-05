@@ -13,7 +13,7 @@ const (
 	// 小黑盒相关 URL
 	heyboxBaseURL     = "https://www.xiaoheihe.cn"
 	heyboxExploreURL  = "https://www.xiaoheihe.cn/home"
-	heyboxPublishURL  = "https://www.xiaoheihe.cn/publish"
+	heyboxPublishURL  = "https://www.xiaoheihe.cn/creator/editor/draft/image_text"
 	heyboxLoginURL    = "https://www.xiaoheihe.cn/login"
 	heyboxCommunityURL = "https://xiaoheihe.cn/app/bbs/home"  // 社区页面
 	heyboxUserURL     = "https://www.xiaoheihe.cn/user"
