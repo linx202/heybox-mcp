@@ -1,10 +1,6 @@
 # heybox-mcp
 
-> 基于 xiaohongshu-mcp 架构的小黑盒 MCP 服务器实现
-
-> 📚 **学习文档**：
-> - [xiaohongshu-mcp-architecture.md](./xiaohongshu-mcp-architecture.md) - 原项目架构学习
-> - [heybox-mcp-implementation-guide.md](./heybox-mcp-implementation-guide.md) - 实现指南
+> 小黑盒 MCP 服务器 - 为 AI 助手提供小黑盒平台交互能力
 
 ---
 
@@ -14,17 +10,16 @@
 
 ### 核心功能
 
-- ✅ 登录管理（二维码）
-- ✅ 发布动态（文字+图片）
-- ✅ 获取动态列表
-- ✅ 搜索内容
-- ✅ 评论/回复
-- ✅ 点赞/收藏
-- ✅ 用户信息查询
-
-### 开发状态
-
-> 🚧 **项目初始化完成，正在开发中...**
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| 登录管理 | ✅ | 二维码扫码登录 |
+| 发布动态 | ✅ | 标题+正文，支持 API 响应截取 |
+| 获取动态列表 | ✅ | 返回完整 JSON 数据 |
+| 搜索内容 | ✅ | 搜索动态和用户 |
+| 评论/回复 | ✅ | 发表评论和回复 |
+| 点赞/收藏 | ✅ | 动态点赞和收藏 |
+| 用户信息 | ✅ | 获取用户主页信息 |
+| 发布视频 | ⏳ | 待实现 |
 
 ---
 
@@ -33,48 +28,34 @@
 ```
 heybox-mcp/
 ├── main.go                      # 主入口
-├── go.mod                       # Go 依赖
+├── mcp_server.go                # MCP 服务器
+├── service.go                   # 服务层
+├── go.mod / go.sum              # Go 依赖
 ├── Makefile                     # 构建脚本
-├── .gitignore                   # Git 忽略
 │
 ├── configs/                     # 配置管理
-│   ├── browser.go               # 浏览器配置
-│   ├── image.go                 # 图片配置
-│   └── username.go              # 用户名配置
-│
 ├── cookies/                     # Cookie 管理
-│   └── cookies.go               # Cookie 存储/加载
-│
 ├── browser/                     # 浏览器封装
-│   └── browser.go               # 浏览器工厂
-│
-├── heybox/                      # 小黑盒业务逻辑
-│   ├── login.go                 # 登录逻辑
+├── heybox/                      # 业务逻辑
+│   ├── login.go                 # 登录功能
 │   ├── publish.go               # 发布动态
 │   ├── feeds.go                 # 动态列表
 │   ├── search.go                # 搜索功能
-│   ├── feed_detail.go           # 帖子详情
 │   ├── comment.go               # 评论功能
 │   ├── like.go                  # 点赞收藏
 │   ├── user_profile.go          # 用户主页
-│   ├── types.go                 # 数据结构
 │   └── navigate.go              # 页面导航
 │
 ├── pkg/downloader/              # 图片下载器
-│   ├── images.go
-│   ├── processor.go
-│   └── images_test.go
-│
 ├── errors/                      # 错误处理
-│   └── errors.go
+├── cmd/                         # 命令行工具
+│   ├── login/                   # 登录工具
+│   └── extract_selectors/       # 选择器提取工具
 │
-├── cmd/login/                   # 登录工具
-│   └── main.go
-│
-├── docs/                        # 文档（可选）
-│   └── API.md
-│
-└── *.md                         # 学习文档
+├── test_publish.go              # 发布测试脚本
+├── test_feeds.go                # 动态列表测试
+├── README.md                    # 项目说明
+└── PROGRESS.md                  # 开发进度
 ```
 
 ---
@@ -89,102 +70,57 @@ heybox-mcp/
 ### 安装
 
 ```bash
-# 1. 克隆项目（如果从 GitHub）
-git clone https://github.com/yourusername/heybox-mcp.git
+# 克隆项目
+git clone https://github.com/linx202/heybox-mcp.git
 cd heybox-mcp
 
-# 2. 安装依赖
-make deps
+# 安装依赖
+go mod download
 
-# 3. 编译
-make build
+# 编译
+go build -o heybox-mcp .
 ```
 
 ### 使用
 
 ```bash
-# 1. 首次登录
-make run-login
-
-# 2. 启动 MCP 服务
-make run
-
-# 3. 或者带界面模式（便于调试）
+# 启动 MCP 服务（显示浏览器）
 ./heybox-mcp -headless=false
+
+# 启动 MCP 服务（无头模式）
+./heybox-mcp -headless=true
+
+# 测试发布功能
+go run test_publish.go
+
+# 测试动态列表
+go run test_feeds.go
 ```
 
-### 验证 MCP
+### MCP Inspector 测试
 
 ```bash
-npx @modelcontextprotocol/inspector
-# 连接到: http://localhost:18060/mcp
+npx @modelcontextprotocol/inspector --transport http --server-url http://localhost:18060/mcp
 ```
 
 ---
 
-## 🔧 开发指南
+## 🔧 MCP 工具列表
 
-### 核心文件实现优先级
-
-1. **Phase 1: 基础设施** ⭐
-   - `configs/browser.go` - 浏览器配置
-   - `cookies/cookies.go` - Cookie 管理
-   - `browser/browser.go` - 浏览器封装
-
-2. **Phase 2: 登录功能** 🔑
-   - `heybox/login.go` - 登录逻辑
-   - `heybox/types.go` - 数据结构
-   - `cmd/login/main.go` - 登录工具
-
-3. **Phase 3: 发布功能** 📝
-   - `heybox/publish.go` - 发布动态
-   - `service.go` - 业务服务层
-   - `mcp_handlers.go` - MCP 处理器
-
-4. **Phase 4: 其他功能** 📚
-   - `heybox/feeds.go` - 动态列表
-   - `heybox/search.go` - 搜索
-   - `heybox/comment.go` - 评论
-   - 等等...
-
-### 参考实现
-
-所有核心代码模板都在 **[heybox-mcp-implementation-guide.md](./heybox-mcp-implementation-guide.md)** 中：
-
-- ✅ `main.go` 完整代码（第 5 节）
-- ✅ `service.go` 完整代码（第 5 节）
-- ✅ `heybox/login.go` 完整代码（第 5 节）
-- ✅ `heybox/publish.go` 完整代码（第 5 节）
-- ✅ `mcp_server.go` 完整代码（第 5 节）
-
----
-
-## 📖 学习资源
-
-| 文档 | 说明 |
-|-----|------|
-| [xiaohongshu-mcp-architecture.md](./xiaohongshu-mcp-architecture.md) | 完整的架构学习文档（10 章） |
-| [heybox-mcp-implementation-guide.md](./heybox-mcp-implementation-guide.md) | 实现指南和代码模板（10 章） |
-| [原项目](https://github.com/xpzouying/xiaohongshu-mcp) | xiaohongshu-mcp 源码 |
-| [MCP 协议](https://modelcontextprotocol.io/) | MCP 官方文档 |
-| [go-rod 文档](https://go-rod.github.io/) | 浏览器自动化库 |
-
----
-
-## 🛠️ Make 命令
-
-```bash
-make build        # 编译主程序
-make login        # 编译登录工具
-make all          # 编译所有
-make run          # 运行主程序
-make run-login    # 运行登录工具
-make test         # 运行测试
-make clean        # 清理构建
-make deps         # 安装依赖
-make docker-build # Docker 构建
-make docker-run   # Docker 运行
-```
+| 工具名称 | 说明 |
+|----------|------|
+| `check_login_status` | 检查登录状态 |
+| `get_login_qrcode` | 获取登录二维码 |
+| `delete_cookies` | 删除 Cookie（退出登录） |
+| `publish_content` | 发布动态内容 |
+| `list_feeds` | 获取推荐动态列表 |
+| `search_feeds` | 搜索内容 |
+| `get_feed_detail` | 获取动态详情 |
+| `get_user_profile` | 获取用户信息 |
+| `post_comment_to_feed` | 发表评论 |
+| `reply_comment_in_feed` | 回复评论 |
+| `like_feed` | 点赞动态 |
+| `favorite_feed` | 收藏动态 |
 
 ---
 
@@ -200,26 +136,65 @@ claude mcp list
 
 ---
 
-## ⚠️ 注意事项
+## 📝 发布功能说明
 
-1. **选择器适配**：小黑盒 DOM 结构需要实际分析，参考实现指南第 7 节
-2. **API 接口**：可能需要直接调用 API 而非浏览器自动化
-3. **反爬虫**：注意请求频率和 Cookie 管理
-4. **功能确认**：部分功能（如收藏）需要先确认小黑盒是否支持
+### 发布页面结构
+
+- **URL**: `https://www.xiaoheihe.cn/creator/editor/draft/image_text`
+- **标题**: `.editor-title__container [contenteditable='true']`
+- **正文**: `.image-text__edit-content--inner [contenteditable='true']`
+- **发布按钮**: `button.editor-publish__btn.main-btn`
+
+### API 响应截取
+
+发布时会自动监听 `api.xiaoheihe.cn/bbs/app/api/link/post` 接口响应：
+
+```json
+{
+  "status": "ok|failed",
+  "msg": "响应消息",
+  "result": {}
+}
+```
 
 ---
 
-## 📅 开发计划
+## 🛠️ Make 命令
+
+```bash
+make build        # 编译主程序
+make run          # 运行主程序
+make test         # 运行测试
+make clean        # 清理构建
+```
+
+---
+
+## ⚠️ 注意事项
+
+1. **选择器适配**：小黑盒 DOM 结构可能变化，需要定期更新选择器
+2. **API 接口**：部分功能通过 API 实现而非浏览器自动化
+3. **反爬虫**：注意请求频率和 Cookie 管理
+4. **账号要求**：发布内容需要绑定手机号
+
+---
+
+## 📅 开发进度
 
 - [x] 项目初始化
-- [ ] 基础设施层
-- [ ] 登录功能
-- [ ] 发布动态
-- [ ] 动态列表
-- [ ] 搜索功能
-- [ ] 评论互动
-- [ ] 用户主页
+- [x] 基础设施层
+- [x] 登录功能
+- [x] 发布动态（标题+正文）
+- [x] 动态列表
+- [x] 搜索功能
+- [x] 评论互动
+- [x] 用户主页
+- [ ] 图片上传
+- [ ] 关联社区/话题
+- [ ] 发布视频
 - [ ] 完善文档
+
+详细进度请查看 [PROGRESS.md](./PROGRESS.md)
 
 ---
 
@@ -232,9 +207,3 @@ claude mcp list
 ## 📄 许可
 
 MIT License
-
----
-
-## 🙏 致谢
-
-本项目基于 [xpzouying/xiaohongshu-mcp](https://github.com/xpzouying/xiaohongshu-mcp) 的架构设计。
